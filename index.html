@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <title>Deal Coach Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --app-bg-start: #1e3a8a;
+        --app-bg-end: #312e81;
+        --accent-teal: #00BFA5;
+        --accent-coral: #FF6B35;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --text-primary: #1A202C;
+        --text-secondary: #4A5568;
+      }
+
+      @keyframes mesh-gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      .mesh-bg {
+        background: linear-gradient(135deg, 
+          #1e3a8a 0%, 
+          #2563eb 25%, 
+          #4f46e5 50%, 
+          #3b82f6 75%, 
+          #1e3a8a 100%
+        );
+        background-size: 400% 400%;
+        animation: mesh-gradient 20s ease-in-out infinite;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+        background: #020617; /* Deep workspace background */
+        color: white;
+        margin: 0;
+        padding: 0;
+        overflow: hidden; 
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* Subtle texture for the desk */
+        background-image: radial-gradient(circle at 50% 50%, rgba(30, 58, 138, 0.1) 0%, transparent 80%);
+      }
+
+      /* Strict Mobile Frame Shell */
+      .mobile-wrapper {
+        position: relative;
+        width: 393px; /* iPhone 15 Pro Width */
+        height: 852px; /* iPhone 15 Pro Height */
+        background: #000;
+        border-radius: 54px;
+        box-shadow: 
+          0 0 0 11px #1f2937, 
+          0 0 0 13px #374151,
+          0 30px 60px rgba(0,0,0,0.8),
+          0 0 100px rgba(59, 130, 246, 0.1);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        margin: 20px;
+        transform: scale(0.95); /* Slight scale down to fit more desktop screens comfortably */
+      }
+
+      /* Adjust scale for smaller desktop heights */
+      @media (max-height: 900px) {
+        .mobile-wrapper {
+          transform: scale(0.85);
+        }
+      }
+      
+      @media (max-height: 800px) {
+        .mobile-wrapper {
+          transform: scale(0.75);
+        }
+      }
+
+      /* Responsive: Full screen ONLY on actual small devices */
+      @media (max-width: 500px) {
+        body {
+          background: #000;
+        }
+        .mobile-wrapper {
+          width: 100vw;
+          height: 100vh;
+          max-width: none;
+          max-height: none;
+          border-radius: 0;
+          box-shadow: none;
+          margin: 0;
+          transform: scale(1);
+        }
+      }
+
+      .ios-scroll-container {
+        flex: 1;
+        width: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background: #020617;
+        position: relative;
+        z-index: 10;
+        scrollbar-width: none; /* Firefox */
+      }
+
+      .ios-scroll-container::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+      }
+
+      .ios-blur {
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+      }
+
+      /* Precision Glassmorphism */
+      .glass-card {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(24px) saturate(200%);
+        -webkit-backdrop-filter: blur(24px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+      }
+
+      @keyframes slide-up {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-ios-slide {
+        animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "react": "https://esm.sh/react@^19.2.3",
+        "recharts": "https://esm.sh/recharts@^3.6.0",
+        "framer-motion": "https://esm.sh/framer-motion@^11.11.11",
+        "motion/": "https://esm.sh/motion@^12.23.26/"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div class="mobile-wrapper">
+      <div id="root" class="ios-scroll-container"></div>
+    </div>
+  </body>
+</html>

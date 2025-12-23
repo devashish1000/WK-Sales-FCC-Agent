@@ -1,0 +1,7 @@
+{
+  "name": "WK Sales | FCC - AI Agent ",
+  "description": "A real-time AI sales coach that roleplays negotiations and provides detailed performance analytics.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
