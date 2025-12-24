@@ -44,8 +44,13 @@ export class LiveClient {
     this.isAISpeaking = false;
     this.aiCooldown = false;
 
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
+    // Get API key - try Vite standard first, then fallback to process.env (defined in vite.config)
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env as any).API_KEY || (process.env as any).GEMINI_API_KEY;
+    if (!apiKey || apiKey === 'undefined' || apiKey === 'null') {
+      console.error('[LiveClient] API Key missing. Available env:', {
+        hasViteKey: !!import.meta.env.VITE_GEMINI_API_KEY,
+        hasProcessKey: !!(process.env as any).API_KEY,
+      });
       this.events.onError?.(new Error("API Key not found. Please select a valid API key."));
       return;
     }
@@ -159,25 +164,54 @@ export class LiveClient {
   private async generateAIResponse() {
     if (this.isIntentionalDisconnect) return;
 
-    try {
-      const result = await this.ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: this.chatHistory,
-        config: {
-          systemInstruction: this.systemInstruction,
-          temperature: 0.7,
-        }
-      });
+    // Use Gemini 3.0 models first (current as of December 2025)
+    // Gemini 1.5 models are retired/unavailable, so use 3.0 as primary
+    const models = ['gemini-3-flash-preview', 'gemini-1.5-flash'];
+    
+    for (const model of models) {
+      try {
+        const result = await this.ai.models.generateContent({
+          model: model,
+          contents: this.chatHistory,
+          config: {
+            systemInstruction: this.systemInstruction,
+            temperature: 0.7,
+          }
+        });
 
-      const responseText = result.text;
-      if (responseText && !this.isIntentionalDisconnect) {
-        this.chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
-        this.events.onTranscription?.('model', responseText);
-        this.speak(responseText);
+        const responseText = result.text;
+        if (responseText && !this.isIntentionalDisconnect) {
+          this.chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
+          this.events.onTranscription?.('model', responseText);
+          this.speak(responseText);
+          return; // Success, exit
+        }
+      } catch (err: any) {
+        const errorMsg = err.message?.toLowerCase() || '';
+        const errorCode = err.code;
+        
+        // Check for billing/permission errors
+        const isBillingError = errorMsg.includes('billing') || 
+                              errorMsg.includes('permission denied') ||
+                              errorMsg.includes('requires a project with active billing') ||
+                              errorCode === 403;
+        
+        // Check for model not found errors
+        const isModelNotFound = errorMsg.includes('not found') || 
+                               errorMsg.includes('model') ||
+                               errorCode === 404;
+        
+        // If billing error on first model, try fallback
+        if ((isBillingError || isModelNotFound) && model === models[0] && models.length > 1) {
+          console.warn(`[LiveClient] Model ${model} failed (${isBillingError ? 'billing' : 'not found'}), trying fallback: ${models[1]}`);
+          continue; // Try fallback model
+        }
+        
+        // If it's the last model or not a recoverable error, throw
+        console.error(`[LiveClient] AI Generation Error with ${model}:`, err);
+        this.events.onError?.(err as Error);
+        return;
       }
-    } catch (err) {
-      console.error("[LiveClient] AI Generation Error:", err);
-      this.events.onError?.(err as Error);
     }
   }
 

@@ -61,13 +61,19 @@ export const analyzeSession = async (transcripts: TranscriptionItem[], duration:
     If the transcript is too short or contains no USER responses, respond with 0 scores and explain why in the summary.
   `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
+  // Use Gemini 3.0 models first (current as of December 2025)
+  // Gemini 1.5 models are retired/unavailable, so use 3.0 as primary
+  const models = ['gemini-3-pro-preview', 'gemini-1.5-pro'];
+  let lastError: any = null;
+  
+  for (const model of models) {
+    try {
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
           type: Type.OBJECT,
           properties: {
             scores: {
@@ -121,17 +127,43 @@ export const analyzeSession = async (transcripts: TranscriptionItem[], duration:
           required: ['scores', 'feedback']
         }
       }
-    });
+      });
 
-    const text = response.text;
-    if (!text) throw new Error("AI failed to generate a response.");
-    
-    return JSON.parse(text) as AnalysisResult;
-  } catch (err: any) {
-    console.error("[AnalysisService] AI call failed:", err);
-    if (err.message?.toLowerCase().includes("requested entity was not found")) {
-       await (window as any).aistudio.openSelectKey();
+      const text = response.text;
+      if (!text) throw new Error("AI failed to generate a response.");
+      
+      return JSON.parse(text) as AnalysisResult;
+    } catch (err: any) {
+      lastError = err;
+      const errorMsg = err.message?.toLowerCase() || '';
+      const errorCode = err.code;
+      
+      // Check for billing/permission errors
+      const isBillingError = errorMsg.includes('billing') || 
+                            errorMsg.includes('permission denied') ||
+                            errorMsg.includes('requires a project with active billing') ||
+                            errorCode === 403;
+      
+      // Check for model not found errors
+      const isModelNotFound = errorMsg.includes('not found') || 
+                             errorMsg.includes('model') ||
+                             errorCode === 404;
+      
+      // If billing or model error on first model, try fallback
+      if ((isBillingError || isModelNotFound) && model === models[0] && models.length > 1) {
+        console.warn(`[AnalysisService] Model ${model} failed (${isBillingError ? 'billing' : 'not found'}), trying fallback: ${models[1]}`);
+        continue; // Try fallback model
+      }
+      
+      // If it's the last model or not a recoverable error, throw
+      console.error(`[AnalysisService] AI call failed with ${model}:`, err);
+      if (err.message?.toLowerCase().includes("requested entity was not found")) {
+         await (window as any).aistudio.openSelectKey();
+      }
+      throw err;
     }
-    throw err;
   }
+  
+  // If we get here, all models failed
+  throw lastError || new Error("All model attempts failed");
 };
