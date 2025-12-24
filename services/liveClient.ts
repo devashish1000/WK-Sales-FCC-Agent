@@ -47,14 +47,15 @@ export class LiveClient {
     // Get API key - try Vite standard first, then fallback to process.env (defined in vite.config)
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env as any).API_KEY || (process.env as any).GEMINI_API_KEY;
     
-    // Trim whitespace and validate
-    const trimmedKey = apiKey?.toString().trim();
+    // Trim whitespace, newlines, and validate
+    const trimmedKey = apiKey?.toString().replace(/\s+/g, '').trim();
     if (!trimmedKey || trimmedKey === 'undefined' || trimmedKey === 'null' || trimmedKey.length < 10) {
       console.error('[LiveClient] API Key missing or invalid. Available env:', {
         hasViteKey: !!import.meta.env.VITE_GEMINI_API_KEY,
         hasProcessKey: !!(process.env as any).API_KEY,
         viteKeyLength: import.meta.env.VITE_GEMINI_API_KEY?.length || 0,
         processKeyLength: (process.env as any).API_KEY?.length || 0,
+        rawKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none',
       });
       this.events.onError?.(new Error("API Key not found. Please add VITE_GEMINI_API_KEY to Vercel environment variables."));
       return;
@@ -62,13 +63,24 @@ export class LiveClient {
 
     // Validate API key format (should start with AIza)
     if (!trimmedKey.startsWith('AIza')) {
-      console.error('[LiveClient] Invalid API key format. Key should start with "AIza"');
+      console.error('[LiveClient] Invalid API key format. Key should start with "AIza", got:', trimmedKey.substring(0, 10));
       this.events.onError?.(new Error("Invalid API key format. Please check your VITE_GEMINI_API_KEY."));
       return;
     }
 
-    console.log('[LiveClient] Initializing GoogleGenAI with API key (length:', trimmedKey.length, ')');
-    this.ai = new GoogleGenAI({ apiKey: trimmedKey });
+    console.log('[LiveClient] Initializing GoogleGenAI with API key (length:', trimmedKey.length, ', prefix:', trimmedKey.substring(0, 10), ')');
+    
+    try {
+      this.ai = new GoogleGenAI({ apiKey: trimmedKey });
+      // Verify the AI instance was created
+      if (!this.ai) {
+        throw new Error('Failed to initialize GoogleGenAI');
+      }
+    } catch (initError: any) {
+      console.error('[LiveClient] Failed to initialize GoogleGenAI:', initError);
+      this.events.onError?.(new Error(`Failed to initialize AI client: ${initError.message}`));
+      return;
+    }
 
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -201,18 +213,40 @@ export class LiveClient {
         }
       } catch (err: any) {
         const errorMsg = err.message?.toLowerCase() || '';
-        const errorCode = err.code;
+        const errorCode = err.code || err.status;
+        const fullError = JSON.stringify(err, null, 2);
+        
+        console.error(`[LiveClient] AI Generation Error with ${model}:`, {
+          message: err.message,
+          code: errorCode,
+          status: err.status,
+          error: fullError
+        });
+        
+        // Check for API key/authentication errors (403 with unregistered callers)
+        const isAuthError = errorCode === 403 && (
+          errorMsg.includes('unregistered callers') ||
+          errorMsg.includes('api key') ||
+          errorMsg.includes('authentication') ||
+          errorMsg.includes('permission denied')
+        );
         
         // Check for billing/permission errors
         const isBillingError = errorMsg.includes('billing') || 
-                              errorMsg.includes('permission denied') ||
                               errorMsg.includes('requires a project with active billing') ||
-                              errorCode === 403;
+                              (errorCode === 403 && !isAuthError);
         
         // Check for model not found errors
         const isModelNotFound = errorMsg.includes('not found') || 
                                errorMsg.includes('model') ||
                                errorCode === 404;
+        
+        // If auth error, this is critical - don't try fallback
+        if (isAuthError) {
+          console.error('[LiveClient] Authentication error - API key not being sent properly');
+          this.events.onError?.(new Error("API authentication failed. Please verify your VITE_GEMINI_API_KEY is correctly set in Vercel."));
+          return;
+        }
         
         // If billing error on first model, try fallback
         if ((isBillingError || isModelNotFound) && model === models[0] && models.length > 1) {
@@ -221,7 +255,6 @@ export class LiveClient {
         }
         
         // If it's the last model or not a recoverable error, throw
-        console.error(`[LiveClient] AI Generation Error with ${model}:`, err);
         this.events.onError?.(err as Error);
         return;
       }

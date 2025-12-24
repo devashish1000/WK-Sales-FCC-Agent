@@ -10,26 +10,37 @@ export const analyzeSession = async (transcripts: TranscriptionItem[], duration:
   // Get API key - try Vite standard first, then fallback to process.env (defined in vite.config)
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env as any).API_KEY || (process.env as any).GEMINI_API_KEY;
   
-  // Trim whitespace and validate
-  const trimmedKey = apiKey?.toString().trim();
+  // Trim whitespace, newlines, and validate
+  const trimmedKey = apiKey?.toString().replace(/\s+/g, '').trim();
   if (!trimmedKey || trimmedKey === 'undefined' || trimmedKey === 'null' || trimmedKey.length < 10) {
     console.error('[AnalysisService] API Key missing or invalid. Available env:', {
       hasViteKey: !!import.meta.env.VITE_GEMINI_API_KEY,
       hasProcessKey: !!(process.env as any).API_KEY,
       viteKeyLength: import.meta.env.VITE_GEMINI_API_KEY?.length || 0,
       processKeyLength: (process.env as any).API_KEY?.length || 0,
+      rawKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'none',
     });
     throw new Error("API Key not found. Please add VITE_GEMINI_API_KEY to Vercel environment variables.");
   }
 
   // Validate API key format (should start with AIza)
   if (!trimmedKey.startsWith('AIza')) {
-    console.error('[AnalysisService] Invalid API key format. Key should start with "AIza"');
+    console.error('[AnalysisService] Invalid API key format. Key should start with "AIza", got:', trimmedKey.substring(0, 10));
     throw new Error("Invalid API key format. Please check your VITE_GEMINI_API_KEY.");
   }
 
-  console.log('[AnalysisService] Initializing GoogleGenAI with API key (length:', trimmedKey.length, ')');
-  const ai = new GoogleGenAI({ apiKey: trimmedKey });
+  console.log('[AnalysisService] Initializing GoogleGenAI with API key (length:', trimmedKey.length, ', prefix:', trimmedKey.substring(0, 10), ')');
+  
+  let ai;
+  try {
+    ai = new GoogleGenAI({ apiKey: trimmedKey });
+    if (!ai) {
+      throw new Error('Failed to initialize GoogleGenAI');
+    }
+  } catch (initError: any) {
+    console.error('[AnalysisService] Failed to initialize GoogleGenAI:', initError);
+    throw new Error(`Failed to initialize AI client: ${initError.message}`);
+  }
   
   // Format transcript with clear speaker labels
   const conversationText = transcripts
