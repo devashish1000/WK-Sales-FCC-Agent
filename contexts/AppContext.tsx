@@ -265,7 +265,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsValidating(false);
     setNotification(null);
 
-    const completionMsg = `Action verified. ${visibleActions.length - 1} items remaining.`;
+    // Calculate remaining items based on the new state (accounting for the action we just completed)
+    // visibleActions is memoized and won't update until next render, so calculate directly
+    const newCompletedCount = completedActionIds.length + 1; // +1 for the action we just completed
+    const remainingCount = allActions.length - newCompletedCount;
+    const completionMsg = `Action verified. ${remainingCount} items remaining.`;
     setLastCompletionMessage(completionMsg);
 
     if (newRank < prevRank) {
