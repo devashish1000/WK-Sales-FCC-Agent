@@ -7,13 +7,29 @@ export const analyzeSession = async (transcripts: TranscriptionItem[], duration:
     throw new Error("Cannot analyze an empty conversation.");
   }
 
-  // Ensure key is selected before continuing
-  const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-  if (!hasKey) {
-    await (window as any).aistudio.openSelectKey();
+  // Get API key - try Vite standard first, then fallback to process.env (defined in vite.config)
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env as any).API_KEY || (process.env as any).GEMINI_API_KEY;
+  
+  // Trim whitespace and validate
+  const trimmedKey = apiKey?.toString().trim();
+  if (!trimmedKey || trimmedKey === 'undefined' || trimmedKey === 'null' || trimmedKey.length < 10) {
+    console.error('[AnalysisService] API Key missing or invalid. Available env:', {
+      hasViteKey: !!import.meta.env.VITE_GEMINI_API_KEY,
+      hasProcessKey: !!(process.env as any).API_KEY,
+      viteKeyLength: import.meta.env.VITE_GEMINI_API_KEY?.length || 0,
+      processKeyLength: (process.env as any).API_KEY?.length || 0,
+    });
+    throw new Error("API Key not found. Please add VITE_GEMINI_API_KEY to Vercel environment variables.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Validate API key format (should start with AIza)
+  if (!trimmedKey.startsWith('AIza')) {
+    console.error('[AnalysisService] Invalid API key format. Key should start with "AIza"');
+    throw new Error("Invalid API key format. Please check your VITE_GEMINI_API_KEY.");
+  }
+
+  console.log('[AnalysisService] Initializing GoogleGenAI with API key (length:', trimmedKey.length, ')');
+  const ai = new GoogleGenAI({ apiKey: trimmedKey });
   
   // Format transcript with clear speaker labels
   const conversationText = transcripts

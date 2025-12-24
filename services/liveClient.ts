@@ -46,16 +46,29 @@ export class LiveClient {
 
     // Get API key - try Vite standard first, then fallback to process.env (defined in vite.config)
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (process.env as any).API_KEY || (process.env as any).GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'undefined' || apiKey === 'null') {
-      console.error('[LiveClient] API Key missing. Available env:', {
+    
+    // Trim whitespace and validate
+    const trimmedKey = apiKey?.toString().trim();
+    if (!trimmedKey || trimmedKey === 'undefined' || trimmedKey === 'null' || trimmedKey.length < 10) {
+      console.error('[LiveClient] API Key missing or invalid. Available env:', {
         hasViteKey: !!import.meta.env.VITE_GEMINI_API_KEY,
         hasProcessKey: !!(process.env as any).API_KEY,
+        viteKeyLength: import.meta.env.VITE_GEMINI_API_KEY?.length || 0,
+        processKeyLength: (process.env as any).API_KEY?.length || 0,
       });
-      this.events.onError?.(new Error("API Key not found. Please select a valid API key."));
+      this.events.onError?.(new Error("API Key not found. Please add VITE_GEMINI_API_KEY to Vercel environment variables."));
       return;
     }
 
-    this.ai = new GoogleGenAI({ apiKey });
+    // Validate API key format (should start with AIza)
+    if (!trimmedKey.startsWith('AIza')) {
+      console.error('[LiveClient] Invalid API key format. Key should start with "AIza"');
+      this.events.onError?.(new Error("Invalid API key format. Please check your VITE_GEMINI_API_KEY."));
+      return;
+    }
+
+    console.log('[LiveClient] Initializing GoogleGenAI with API key (length:', trimmedKey.length, ')');
+    this.ai = new GoogleGenAI({ apiKey: trimmedKey });
 
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
