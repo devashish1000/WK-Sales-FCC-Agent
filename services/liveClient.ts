@@ -114,9 +114,10 @@ export class LiveClient {
       };
       pollVolume();
 
+      // FREE TIER STT: Use browser's built-in SpeechRecognition API (no billing required)
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        throw new Error("Speech Recognition is not supported in this browser.");
+        throw new Error("Speech Recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       }
 
       this.recognition = new SpeechRecognition();
@@ -189,75 +190,54 @@ export class LiveClient {
   private async generateAIResponse() {
     if (this.isIntentionalDisconnect) return;
 
-    // Use Gemini 3.0 models first (current as of December 2025)
-    // Gemini 1.5 models are retired/unavailable, so use 3.0 as primary
-    const models = ['gemini-3-flash-preview', 'gemini-1.5-flash'];
+    // FREE TIER: Use Gemini 2.5 Flash text model (standard text API, no billing required)
+    // This uses the standard generateContent endpoint, not the Live API
+    const model = 'gemini-2.5-flash';
     
-    for (const model of models) {
-      try {
-        const result = await this.ai.models.generateContent({
-          model: model,
-          contents: this.chatHistory,
-          config: {
-            systemInstruction: this.systemInstruction,
-            temperature: 0.7,
-          }
-        });
+    try {
+      const result = await this.ai.models.generateContent({
+        model: model,
+        contents: this.chatHistory,
+        config: {
+          systemInstruction: this.systemInstruction,
+          temperature: 0.7,
+        }
+      });
 
-        const responseText = result.text;
-        if (responseText && !this.isIntentionalDisconnect) {
-          this.chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
-          this.events.onTranscription?.('model', responseText);
-          this.speak(responseText);
-          return; // Success, exit
-        }
-      } catch (err: any) {
-        const errorMsg = err.message?.toLowerCase() || '';
-        const errorCode = err.code || err.status;
-        const fullError = JSON.stringify(err, null, 2);
-        
-        console.error(`[LiveClient] AI Generation Error with ${model}:`, {
-          message: err.message,
-          code: errorCode,
-          status: err.status,
-          error: fullError
-        });
-        
-        // Check for API key/authentication errors (403 with unregistered callers)
-        const isAuthError = errorCode === 403 && (
-          errorMsg.includes('unregistered callers') ||
-          errorMsg.includes('api key') ||
-          errorMsg.includes('authentication') ||
-          errorMsg.includes('permission denied')
-        );
-        
-        // Check for billing/permission errors
-        const isBillingError = errorMsg.includes('billing') || 
-                              errorMsg.includes('requires a project with active billing') ||
-                              (errorCode === 403 && !isAuthError);
-        
-        // Check for model not found errors
-        const isModelNotFound = errorMsg.includes('not found') || 
-                               errorMsg.includes('model') ||
-                               errorCode === 404;
-        
-        // If auth error, this is critical - don't try fallback
-        if (isAuthError) {
-          console.error('[LiveClient] Authentication error - API key not being sent properly');
-          this.events.onError?.(new Error("API authentication failed. Please verify your VITE_GEMINI_API_KEY is correctly set in Vercel."));
-          return;
-        }
-        
-        // If billing error on first model, try fallback
-        if ((isBillingError || isModelNotFound) && model === models[0] && models.length > 1) {
-          console.warn(`[LiveClient] Model ${model} failed (${isBillingError ? 'billing' : 'not found'}), trying fallback: ${models[1]}`);
-          continue; // Try fallback model
-        }
-        
-        // If it's the last model or not a recoverable error, throw
-        this.events.onError?.(err as Error);
+      const responseText = result.text;
+      if (responseText && !this.isIntentionalDisconnect) {
+        this.chatHistory.push({ role: 'model', parts: [{ text: responseText }] });
+        this.events.onTranscription?.('model', responseText);
+        // Use browser's built-in speechSynthesis (free TTS)
+        this.speak(responseText);
         return;
       }
+    } catch (err: any) {
+      const errorMsg = err.message?.toLowerCase() || '';
+      const errorCode = err.code || err.status;
+      
+      console.error(`[LiveClient] AI Generation Error with ${model}:`, {
+        message: err.message,
+        code: errorCode,
+        status: err.status,
+      });
+      
+      // Check for API key/authentication errors
+      const isAuthError = errorCode === 403 && (
+        errorMsg.includes('unregistered callers') ||
+        errorMsg.includes('api key') ||
+        errorMsg.includes('authentication') ||
+        errorMsg.includes('permission denied')
+      );
+      
+      if (isAuthError) {
+        console.error('[LiveClient] Authentication error - API key not being sent properly');
+        this.events.onError?.(new Error("API authentication failed. Please verify your VITE_GEMINI_API_KEY is correctly set in Vercel."));
+        return;
+      }
+      
+      // For other errors, report them
+      this.events.onError?.(err as Error);
     }
   }
 
@@ -270,6 +250,7 @@ export class LiveClient {
       try { this.recognition.stop(); } catch(e) {}
     }
 
+    // FREE TIER TTS: Use browser's built-in speechSynthesis API (no billing required)
     this.synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     const voices = this.synth.getVoices();
