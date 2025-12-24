@@ -215,8 +215,7 @@ export const DealHealthDashboard: React.FC<DashboardProps> = ({
                 <div className="w-full max-sm space-y-3">
                     <div className="grid grid-cols-1 gap-2.5">
                         <button 
-                            onClick={() => !isRiskComplete && scrollToActions('missing_field')}
-                            disabled={isRiskComplete}
+          onClick={() => !isRiskComplete && onFixAction(missingFieldActions[0])}                            disabled={isRiskComplete}
                             className={`group relative bg-white/5 border border-white/15 p-4 px-5 rounded-[20px] transition-all flex flex-row items-center justify-between backdrop-blur-lg ${isRiskComplete ? 'opacity-40 cursor-default' : 'hover:bg-white/15 hover:border-white/30 hover:shadow-lg active:scale-95'}`}
                         >
                             <span className="text-[12px] font-black text-[oklch(1_0_0_/_0.98)] uppercase tracking-[1.5px]">Fix Issues</span>
@@ -225,8 +224,7 @@ export const DealHealthDashboard: React.FC<DashboardProps> = ({
                             </div>
                         </button>
                         <button 
-                            onClick={() => !isGrowthComplete && scrollToActions('potential')}
-                            disabled={isGrowthComplete}
+          onClick={() => !isGrowthComplete && onFixAction(potentialActions[0])}                            disabled={isGrowthComplete}
                             className={`group relative bg-white/5 border border-white/15 p-4 px-5 rounded-[20px] transition-all flex flex-row items-center justify-between backdrop-blur-lg ${isGrowthComplete ? 'opacity-40 cursor-default' : 'hover:bg-white/15 hover:border-white/30 hover:shadow-lg active:scale-95'}`}
                         >
                             <span className="text-[12px] font-black text-[oklch(1_0_0_/_0.98)] uppercase tracking-[1.5px]">Earn Points</span>
