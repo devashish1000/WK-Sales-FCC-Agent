@@ -267,7 +267,8 @@ export const DealPipeline: React.FC<DealPipelineProps> = ({
       </section>
 
       <AnimatePresence>
-        {activeAction && (
+        365
+          (
             <motion.div 
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -280,7 +281,8 @@ export const DealPipeline: React.FC<DealPipelineProps> = ({
                             <IconAlert />
                         </div>
                         <div>
-                            <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.2em] mb-1 leading-none">Intervention Required</p>
+                            <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.2em] mb-1 leading-none">350
+                            </p>
                             <h3 className="text-white font-bold text-base leading-none">{activeAction.label}</h3>
                         </div>
                     </div>
@@ -291,13 +293,13 @@ export const DealPipeline: React.FC<DealPipelineProps> = ({
                             value={fieldValue}
                             onChange={(e) => setFieldValue(e.target.value)}
                             placeholder="Complete required field..."
-                            className="bg-white/5 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white/10 transition-all flex-1"
+                            className="bg-white/5 border border-white/10 text-white placeholder-white/20 rounded-xl px-4 py-2.5 text-sm outline-none focus:bg-white/10 transition-all flex-1" max-w-full min-w-0
                         />
                         <button 
                             onClick={onCompleteAction}
                             disabled={!fieldValue.trim() || isSubmitting}
                             className={`rounded-xl px-6 py-2.5 font-black text-[10px] uppercase tracking-widest transition-all ${
-                                fieldValue.trim() ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-xl' : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
+                                fieldValue.trim() ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-xl' : 'bg-white/5 text-white/20 cursor-not-allowed border border-white whitespace-nowrap flex-shrink-0/5'
                             }`}
                         >
                             {isSubmitting ? 'Syncing...' : 'Resolve'}
