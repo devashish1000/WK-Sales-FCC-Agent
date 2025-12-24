@@ -45,6 +45,7 @@ interface AppContextType {
   // Notifications
   notification: { message: string; type: 'success' | 'info' | 'rank' | 'loading'; subtext?: string } | null;
   showNotification: (message: string, type?: 'success' | 'info' | 'rank' | 'loading', subtext?: string) => void;
+  clearNotification: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -154,6 +155,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const showNotification = (message: string, type: 'success' | 'info' | 'rank' | 'loading' = 'success', subtext?: string) => {
+    // Don't show notifications with empty messages
+    if (!message || message.trim() === '') {
+      setNotification(null);
+      return;
+    }
+    
     if (type === 'rank') {
       setNotification({ message, type, subtext });
       setTimeout(() => setNotification(prev => prev?.message === message ? null : prev), 4000);
@@ -163,6 +170,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setTimeout(() => setNotification(prev => prev?.message === message ? null : prev), 4000);
       }
     }
+  };
+
+  const clearNotification = () => {
+    setNotification(null);
   };
 
   const handleFixAction = (action: ActionItem) => {
@@ -312,7 +323,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     handleCancelAction,
     handleMetricDealClick,
     notification,
-    showNotification
+    showNotification,
+    clearNotification
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

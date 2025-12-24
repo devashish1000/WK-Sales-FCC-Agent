@@ -11,7 +11,7 @@ import { InsightsPage } from './pages/InsightsPage';
 import { woltersKluwerReps } from './data/salesReps';
 
 const ProtectedRoutes: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
-  const { currentUser, notification, setCurrentUser, setScoreAdjustment, setCompletedActionIds, setActiveAction, showNotification, setPipelineContext } = useAppContext();
+  const { currentUser, notification, setCurrentUser, setScoreAdjustment, setCompletedActionIds, setActiveAction, clearNotification, setPipelineContext } = useAppContext();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -22,7 +22,7 @@ const ProtectedRoutes: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     setCompletedActionIds([]);
     setActiveAction(null);
     setPipelineContext(null);
-    showNotification('', 'info'); // Clear notification
+    clearNotification(); // Clear notification properly
     // Use localStorage to persist login state
     localStorage.removeItem('isLoggedIn');
     // Update parent App component's isLoggedIn state
@@ -36,7 +36,7 @@ const ProtectedRoutes: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     setCompletedActionIds([]);
     setActiveAction(null);
     setPipelineContext(null);
-    showNotification('', 'info'); // Clear notification
+    clearNotification(); // Clear notification properly
   };
 
   return (
