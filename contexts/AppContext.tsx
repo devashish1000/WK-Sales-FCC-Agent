@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { View, SalesRep, MetricAlert, ActionItem } from '../types';
 import { woltersKluwerReps } from '../data/salesReps';
 import { getRepMetrics } from '../data/repMetrics';
@@ -49,31 +50,9 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Module-level navigation ref - will be set by RouterContextBridge
-let navigationRef: {
-  navigate: (path: string) => void;
-  pathname: string;
-} | null = null;
-
-// Component that bridges React Router hooks to the context
-// This must be rendered inside Routes to use React Router hooks safely
-export const RouterContextBridge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const ReactRouterDOM = require('react-router-dom');
-  const navigate = ReactRouterDOM.useNavigate();
-  const location = ReactRouterDOM.useLocation();
-  
-  // Update navigation ref so AppContextProvider can use it
-  useEffect(() => {
-    navigationRef = {
-      navigate: (path: string) => navigate(path),
-      pathname: location.pathname
-    };
-  }, [navigate, location.pathname]);
-  
-  return <>{children}</>;
-};
-
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const defaultUser = woltersKluwerReps.find(rep => rep.email === 'michael.thompson@wolterskluwer.com') || woltersKluwerReps[49];
   const [currentUser, setCurrentUser] = useState<SalesRep>(defaultUser);
   const [currentView, setCurrentView] = useState<View>('DASHBOARD');
@@ -84,55 +63,22 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'info' | 'rank' | 'loading', subtext?: string} | null>(null);
   const [lastCompletionMessage, setLastCompletionMessage] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  const [currentPathname, setCurrentPathname] = useState<string>(typeof window !== 'undefined' ? window.location.pathname : '/');
 
-  // Sync view with route - listen to pathname changes via navigation ref
+  // Sync view with route - listen to pathname changes
   useEffect(() => {
-    const checkPathname = () => {
-      if (navigationRef) {
-        const path = navigationRef.pathname;
-        if (path !== currentPathname) {
-          setCurrentPathname(path);
-          if (path === '/' || path === '/dashboard') {
-            setCurrentView('DASHBOARD');
-          } else if (path === '/pipeline') {
-            setCurrentView('DEALS');
-          } else if (path === '/ai-coach') {
-            setCurrentView('COACH');
-          } else if (path === '/settings') {
-            setCurrentView('SETTINGS');
-          } else if (path === '/insights') {
-            setCurrentView('INSIGHTS');
-          }
-        }
-      } else {
-        // Fallback to window.location if ref not set yet
-        const path = typeof window !== 'undefined' ? window.location.pathname : '/';
-        if (path !== currentPathname) {
-          setCurrentPathname(path);
-          if (path === '/' || path === '/dashboard') {
-            setCurrentView('DASHBOARD');
-          } else if (path === '/pipeline') {
-            setCurrentView('DEALS');
-          } else if (path === '/ai-coach') {
-            setCurrentView('COACH');
-          } else if (path === '/settings') {
-            setCurrentView('SETTINGS');
-          } else if (path === '/insights') {
-            setCurrentView('INSIGHTS');
-          }
-        }
-      }
-    };
-    
-    // Check immediately
-    checkPathname();
-    
-    // Poll for pathname changes (since we can't use useLocation directly)
-    const interval = setInterval(checkPathname, 100);
-    
-    return () => clearInterval(interval);
-  }, [currentPathname]);
+    const path = location.pathname;
+    if (path === '/' || path === '/dashboard') {
+      setCurrentView('DASHBOARD');
+    } else if (path === '/pipeline') {
+      setCurrentView('DEALS');
+    } else if (path === '/ai-coach') {
+      setCurrentView('COACH');
+    } else if (path === '/settings') {
+      setCurrentView('SETTINGS');
+    } else if (path === '/insights') {
+      setCurrentView('INSIGHTS');
+    }
+  }, [location.pathname]);
 
   const allActions: ActionItem[] = useMemo(() => {
     const deals = getDealsForRep(currentUser.id);
@@ -234,11 +180,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setLastCompletionMessage(null);
     setActiveAction(action);
     setCurrentView('DEALS');
-    if (navigationRef) {
-      navigationRef.navigate('/pipeline');
-    } else if (typeof window !== 'undefined') {
-      window.location.href = '/pipeline';
-    }
+    navigate('/pipeline');
     showNotification(`Navigating to ${action.dealName}...`, 'info');
   };
 
@@ -296,11 +238,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     setPipelineContext({ company, alert: alerts[alertType] });
     setCurrentView('DEALS');
-    if (navigationRef) {
-      navigationRef.navigate('/pipeline');
-    } else if (typeof window !== 'undefined') {
-      window.location.href = '/pipeline';
-    }
+    navigate('/pipeline');
   };
 
   const handleCompleteAction = async () => {
@@ -351,11 +289,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setLastCompletionMessage(null);
         setActiveAction(null);
         setCurrentView('DASHBOARD');
-        if (navigationRef) {
-          navigationRef.navigate('/');
-        } else if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
+        navigate('/');
       }, 2500);
     }
   };

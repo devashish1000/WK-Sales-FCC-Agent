@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Login } from './components/Login';
 import { AppShell } from './components/AppShell';
-import { AppContextProvider, useAppContext, RouterContextBridge } from './contexts/AppContext';
+import { AppContextProvider, useAppContext } from './contexts/AppContext';
 import { DashboardPage } from './pages/DashboardPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { CoachPage } from './pages/CoachPage';
@@ -70,11 +70,7 @@ const App: React.FC = () => {
           </Routes>
         ) : (
           <Routes>
-            <Route path="/" element={
-              <RouterContextBridge>
-                <ProtectedRoutes onLogout={() => setIsLoggedIn(false)} />
-              </RouterContextBridge>
-            }>
+            <Route path="/" element={<ProtectedRoutes onLogout={() => setIsLoggedIn(false)} />}>
               <Route index element={<DashboardPage />} />
               <Route path="dashboard" element={<Navigate to="/" replace />} />
               <Route path="pipeline" element={<PipelinePage />} />
