@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => {
     // So we'll use VITE_GEMINI_API_KEY as the standard
     const apiKey = env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY;
     return {
+      root: '.',
+      build: {
+        outDir: 'dist',
+        emptyOutDir: true,
+      },
       server: {
         port: 3000,
         host: '0.0.0.0',

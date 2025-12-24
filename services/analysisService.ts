@@ -90,14 +90,14 @@ export const analyzeSession = async (transcripts: TranscriptionItem[], duration:
 
   // FREE TIER: Use Gemini 2.5 Flash for analysis (standard text API, no billing required)
   const model = 'gemini-2.5-flash';
-  
+
   try {
     const response = await ai.models.generateContent({
       model: model,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
           type: Type.OBJECT,
           properties: {
             scores: {
@@ -151,11 +151,11 @@ export const analyzeSession = async (transcripts: TranscriptionItem[], duration:
           required: ['scores', 'feedback']
         }
       }
-      });
+    });
 
-      const text = response.text;
-      if (!text) throw new Error("AI failed to generate a response.");
-      
+    const text = response.text;
+    if (!text) throw new Error("AI failed to generate a response.");
+    
     return JSON.parse(text) as AnalysisResult;
   } catch (err: any) {
     const errorMsg = err.message?.toLowerCase() || '';

@@ -267,8 +267,7 @@ export const DealPipeline: React.FC<DealPipelineProps> = ({
       </section>
 
       <AnimatePresence>
-        365
-          (
+        {activeAction && (
             <motion.div 
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
