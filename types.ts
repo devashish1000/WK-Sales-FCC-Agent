@@ -136,3 +136,11 @@ export interface MetricAlert {
   color: string;
   actions: { label: string; icon: string; points?: number }[];
 }
+
+export interface ActionItem {
+  id: string;
+  label: string;
+  dealName: string;
+  points: number;
+  type: string;
+}
