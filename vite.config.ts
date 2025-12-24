@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
     const apiKey = env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY;
     return {
       root: '.',
+      base: '/',
       build: {
         outDir: 'dist',
         emptyOutDir: true,
